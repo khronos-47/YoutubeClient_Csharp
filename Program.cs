@@ -36,7 +36,7 @@ internal class Program
             switch (update)
             {
                 case UpdateNewMessage unm: await Message_handler(unm.message); break;
-                //case UpdateNewMessageBase unm: await Message_handler(unm.message); break;
+                default: Console.WriteLine(update.GetType().Name); break;
             }
     }
     static async Task Message_handler(MessageBase messageBase)
@@ -48,11 +48,25 @@ internal class Program
             case Message m: message = m;
                 break;
         }
+        if(message?.from_id?.ID == client.User.ID )
+        {
+            Console.WriteLine("return 0 \n");
+            Console.WriteLine(message.post_author);
+            Console.WriteLine(client.User.first_name);
+            Console.WriteLine(client.User.last_name);
+            return ;
+        }
         string text = message.message;
         string[] url = text.Split(' ').ToArray();
-
+        string caption = text;
         var chats = await client.Messages_GetAllDialogs();
-        InputPeer peer = chats.users[message.From.ID];
+        foreach(var k in chats.users)
+        {
+            Console.WriteLine(k + "   " + k.Key + '\n');
+        }
+
+        Console.WriteLine(message.peer_id);
+        InputPeer peer = chats.users[message.peer_id.ID];
 
         YoutubeClient youtube = new YoutubeClient();
         var stream = await youtube.Videos.Streams.GetManifestAsync(url[3]);
@@ -67,15 +81,15 @@ internal class Program
         {
             var video = stream.GetMuxedStreams().Where(i => i.VideoQuality.ToString() == url[2]).OrderByDescending(i=> i.Size).First();
 
-            string filename = $"{url[0 ]}.{video.Container.Name}";
+            string filename = $"{url[0].Split('/').Last()}.mp4";
             await youtube.Videos.Streams.DownloadAsync(video, filename);
 
             var file = await client.UploadFileAsync(filename);
             
-            await client.SendMessageAsync(peer, "sdbs",  new InputMediaUploadedDocument
+            await client.SendMessageAsync(peer, caption,  new InputMediaUploadedDocument
             {
                 file = file,
-                mime_type = $"video/{video.Container.Name}",
+                mime_type = $"video/mp4",
                 thumb = photo,
                 flags = InputMediaUploadedDocument.Flags.has_thumb,
                 attributes = new[] { new DocumentAttributeVideo { flags = DocumentAttributeVideo.Flags.supports_streaming }}
@@ -106,7 +120,7 @@ internal class Program
                 attributes = new[] {new DocumentAttributeAudio { title = thub.Title , flags = DocumentAttributeAudio.Flags.has_title} }
             };
             
-            await client.SendMessageAsync(peer, "dsv", media);
+            await client.SendMessageAsync(peer, caption, media);
         }
     }
     static async Task Main(string[] args)
